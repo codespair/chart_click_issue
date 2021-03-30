@@ -1,3 +1,5 @@
+import 'dart:isolate';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -77,9 +79,9 @@ class MyHomePage extends HookWidget {
               if (touchResponse.lineBarSpots.isNotEmpty) {
                 var posItemTouched = touchResponse.lineBarSpots[0].x;
                 var scrollTo = _scrollTo(carList, posItemTouched);
-                _scrollController.animateTo(scrollTo,
+                scrollTo.then((result) => _scrollController.animateTo(result,
                     duration: Duration(milliseconds: 300),
-                    curve: Curves.linear);
+                    curve: Curves.linear));
               }
             },
           ),
@@ -134,7 +136,8 @@ class MyHomePage extends HookWidget {
     );
   }
 
-  double _scrollTo(List<CarSales> carSalesList, double posItemTouched) {
+  Future<double> _scrollTo(
+      List<CarSales> carSalesList, double posItemTouched) async {
     var result = 0.0;
     var posInList = carSalesList.length - posItemTouched - 1;
     var maxScrollExtent = _scrollController.position.maxScrollExtent;
@@ -149,6 +152,8 @@ class MyHomePage extends HookWidget {
     //     () async => _listSelectedIndex.value = posInList.toInt());
     return result;
   }
+
+  void paintSelectedRow(SendPort callerSendPort) {}
 
   Widget _getSlidableCarList(List<CarSales> carList, BuildContext context) {
     return ListView.builder(
