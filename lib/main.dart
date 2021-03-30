@@ -27,6 +27,7 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends HookWidget {
+  ScrollController _scrollController = ScrollController();
   final double itemExtentSize = 70.0;
   @override
   Widget build(BuildContext context) {
@@ -70,6 +71,15 @@ class MyHomePage extends HookWidget {
           backgroundColor: Colors.white,
           lineTouchData: LineTouchData(
             enabled: true,
+            touchCallback: (LineTouchResponse touchResponse) {
+              if (touchResponse.lineBarSpots.isNotEmpty) {
+                var posItemTouched = touchResponse.lineBarSpots[0].x;
+                var scrollTo = _scrollTo(carList, posItemTouched);
+                _scrollController.animateTo(scrollTo,
+                    duration: Duration(milliseconds: 300),
+                    curve: Curves.linear);
+              }
+            },
           ),
           lineBarsData: [
             LineChartBarData(
@@ -122,10 +132,22 @@ class MyHomePage extends HookWidget {
     );
   }
 
+  double _scrollTo(List<CarSales> carSalesList, double posItemTouched) {
+    var result = 0.0;
+    var posInList = carSalesList.length - posItemTouched - 1;
+    var maxScrollExtent = _scrollController.position.maxScrollExtent;
+    var posItemTouchedExt = posInList * itemExtentSize;
+    result = posItemTouchedExt < maxScrollExtent
+        ? posItemTouchedExt
+        : maxScrollExtent;
+    return result;
+  }
+
   Widget _getSlidableCarList(List<CarSales> carList, BuildContext context) {
     return ListView.builder(
       itemExtent: itemExtentSize,
       itemCount: carList.length,
+      controller: _scrollController,
       scrollDirection: Axis.vertical,
       shrinkWrap: true,
       itemBuilder: (context, index) {
