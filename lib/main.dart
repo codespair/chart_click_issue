@@ -29,9 +29,11 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends HookWidget {
   ScrollController _scrollController = ScrollController();
   final double itemExtentSize = 70.0;
+  var _listSelectedIndex;
   @override
   Widget build(BuildContext context) {
     final _carProvider = useProvider(carProvider);
+    _listSelectedIndex = useState<int>(-1);
     return Scaffold(
       appBar: AppBar(
         title: Text('Car Sales'),
@@ -140,6 +142,11 @@ class MyHomePage extends HookWidget {
     result = posItemTouchedExt < maxScrollExtent
         ? posItemTouchedExt
         : maxScrollExtent;
+    // the line below causes the issue but it's necessary to paint the selected row on the list.
+    _listSelectedIndex.value = posInList.toInt();
+    // even with delayed call it doesn't work properly.
+    // Future.delayed(Duration(seconds: 1),
+    //     () async => _listSelectedIndex.value = posInList.toInt());
     return result;
   }
 
@@ -154,7 +161,10 @@ class MyHomePage extends HookWidget {
         return Slidable(
             key: UniqueKey(),
             closeOnScroll: true,
+            actionPane: SlidableDrawerActionPane(),
             child: ListTile(
+              selectedTileColor: Colors.deepPurpleAccent[100],
+              selected: index == _listSelectedIndex.value,
               title: Text('${carList[index].car}',
                   style: Theme.of(context).textTheme.headline5),
               subtitle: Text(
