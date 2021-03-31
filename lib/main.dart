@@ -11,9 +11,15 @@ void main() {
   runApp(ProviderScope(child: MyApp()));
 }
 
+class SelectedIndex extends StateNotifier<int> {
+  SelectedIndex() : super(-1);
+  void setSelected(int index) => state = index;
+}
+
 // riverpod provider
 final carProvider = FutureProvider((_) => _allCarSales());
-final listSelectedIndexProvider = StateProvider((ref) => -1);
+final listSelectedIndexProvider =
+    StateNotifierProvider((ref) => SelectedIndex());
 
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
@@ -32,10 +38,11 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends HookWidget {
   ScrollController _scrollController = ScrollController();
   final double itemExtentSize = 70.0;
+  SelectedIndex selectedIndex;
   @override
   Widget build(BuildContext context) {
     final _carProvider = useProvider(carProvider);
-    final _listProvider = useProvider(listSelectedIndexProvider);
+    selectedIndex = useProvider(listSelectedIndexProvider);
     return Scaffold(
       appBar: AppBar(
         title: Text('Car Sales'),
@@ -47,7 +54,7 @@ class MyHomePage extends HookWidget {
             padding: EdgeInsets.fromLTRB(20, 20, 15, 5),
             height: 200,
             child: _carProvider.when(
-              data: (carList) => _buildLineChart(carList, _listProvider),
+              data: (carList) => _buildLineChart(carList),
               loading: () => CircularProgressIndicator(),
               error: (_, __) => Text('Ooooopsss error'),
             ),
@@ -64,8 +71,7 @@ class MyHomePage extends HookWidget {
     );
   }
 
-  Widget _buildLineChart(
-      List<CarSales> carList, StateController<int> _listProvider) {
+  Widget _buildLineChart(List<CarSales> carList) {
     var bpChartData = _BPChartData.build(carList);
     return SizedBox(
       key: UniqueKey(),
@@ -79,8 +85,7 @@ class MyHomePage extends HookWidget {
             touchCallback: (LineTouchResponse touchResponse) {
               if (touchResponse.lineBarSpots.isNotEmpty) {
                 var posItemTouched = touchResponse.lineBarSpots[0].x;
-                var scrollTo =
-                    _scrollTo(carList, posItemTouched, _listProvider);
+                var scrollTo = _scrollTo(carList, posItemTouched);
                 scrollTo.then((result) => _scrollController.animateTo(result,
                     duration: Duration(milliseconds: 300),
                     curve: Curves.linear));
@@ -138,8 +143,8 @@ class MyHomePage extends HookWidget {
     );
   }
 
-  Future<double> _scrollTo(List<CarSales> carSalesList, double posItemTouched,
-      StateController<int> _listProvider) async {
+  Future<double> _scrollTo(
+      List<CarSales> carSalesList, double posItemTouched) async {
     var result = 0.0;
     var posInList = carSalesList.length - posItemTouched - 1;
     var maxScrollExtent = _scrollController.position.maxScrollExtent;
@@ -148,7 +153,7 @@ class MyHomePage extends HookWidget {
         ? posItemTouchedExt
         : maxScrollExtent;
     // the line below causes the issue but it's necessary to paint the selected row on the list.
-    _listProvider.state = posInList.toInt();
+    selectedIndex.setSelected(posInList.toInt());
     // even with delayed call it doesn't work properly.
     // Future.delayed(Duration(seconds: 1),
     //     () async => _listSelectedIndex.value = posInList.toInt());
