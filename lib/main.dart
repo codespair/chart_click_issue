@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 
 void main() {
   runApp(ProviderScope(child: MyApp()));
@@ -26,14 +27,12 @@ class MyApp extends StatelessWidget {
   }
 }
 
+// ignore: must_be_immutable
 class MyHomePage extends HookWidget {
-  ScrollController _scrollController = ScrollController();
-  final double itemExtentSize = 70.0;
-  var _listSelectedIndex;
+  CarListWidget carListWidget;
   @override
   Widget build(BuildContext context) {
     final _carProvider = useProvider(carProvider);
-    _listSelectedIndex = useState<int>(-1);
     return Scaffold(
       appBar: AppBar(
         title: Text('Car Sales'),
@@ -45,14 +44,17 @@ class MyHomePage extends HookWidget {
             padding: EdgeInsets.fromLTRB(20, 20, 15, 5),
             height: 200,
             child: _carProvider.when(
-              data: (carList) => _buildLineChart(carList),
+              data: (carList) {
+                carListWidget = CarListWidget(carList: carList);
+                return _buildLineChart(carList);
+              },
               loading: () => CircularProgressIndicator(),
               error: (_, __) => Text('Ooooopsss error'),
             ),
           ),
           Expanded(
             child: _carProvider.when(
-              data: (carList) => _getSlidableCarList(carList, context),
+              data: (carList) => carListWidget,
               loading: () => CircularProgressIndicator(),
               error: (_, __) => Text('Ooopsss error'),
             ),
@@ -77,7 +79,7 @@ class MyHomePage extends HookWidget {
               if (touchResponse.lineBarSpots.isNotEmpty) {
                 var posItemTouched = touchResponse.lineBarSpots[0].x;
                 var scrollTo = _scrollTo(carList, posItemTouched);
-                _scrollController.animateTo(scrollTo,
+                carListWidget._scrollController.animateTo(scrollTo,
                     duration: Duration(milliseconds: 300),
                     curve: Curves.linear);
               }
@@ -137,20 +139,32 @@ class MyHomePage extends HookWidget {
   double _scrollTo(List<CarSales> carSalesList, double posItemTouched) {
     var result = 0.0;
     var posInList = carSalesList.length - posItemTouched - 1;
-    var maxScrollExtent = _scrollController.position.maxScrollExtent;
-    var posItemTouchedExt = posInList * itemExtentSize;
+    var maxScrollExtent = carListWidget._scrollController.position.maxScrollExtent;
+    var posItemTouchedExt = posInList * carListWidget.itemExtentSize;
     result = posItemTouchedExt < maxScrollExtent
         ? posItemTouchedExt
         : maxScrollExtent;
     // the line below causes the issue but it's necessary to paint the selected row on the list.
-    _listSelectedIndex.value = posInList.toInt();
+    carListWidget._listSelectedIndex.value = posInList.toInt();
     // even with delayed call it doesn't work properly.
     // Future.delayed(Duration(seconds: 1),
     //     () async => _listSelectedIndex.value = posInList.toInt());
     return result;
   }
+}
 
-  Widget _getSlidableCarList(List<CarSales> carList, BuildContext context) {
+// ignore: must_be_immutable
+class CarListWidget extends HookWidget {
+  final List<CarSales> carList;
+  final ScrollController _scrollController = ScrollController();
+  final double itemExtentSize = 70.0;
+
+  CarListWidget({Key key, @required this.carList}) : super(key: key);
+
+  var _listSelectedIndex;
+
+  Widget build(BuildContext context) {
+    _listSelectedIndex = useState<int>(-1);
     return ListView.builder(
       itemExtent: itemExtentSize,
       itemCount: carList.length,
